@@ -97,16 +97,29 @@
 
 ---
 
-## Day 4 — (Upcoming) | Dashboard + Task UI
+## Day 4 — 2026-06-07 | Dashboard UI + Task Management
 
-### Plan
-- Build main Dashboard page
-- Task list with pending/completed filter tabs
-- Add Task modal/form
-- Edit Task inline
-- Toggle status with one click
-- Delete task with confirmation
-- Search bar to filter tasks
+### What I did
+- Built full Dashboard page replacing the Day 3 placeholder
+- Implemented task list with pending/completed filter tabs
+- Connected Dashboard to backend `/api/tasks` via Axios with JWT header
+- Added task creation form/modal — POST to `/api/tasks`
+- Added inline edit functionality — PUT to `/api/tasks/:id`
+- Added one-click status toggle — PATCH to `/api/tasks/:id/toggle`
+- Added delete task with confirmation — DELETE to `/api/tasks/:id`
+- Added search bar to filter tasks by keyword
+- Updated `backend/models/Task.js` and `backend/routes/tasks.js` (bug fixes / field updates)
+- Polished Dashboard CSS to match dark auth UI aesthetic
+- Updated `frontend/src/index.css` for global consistency
+
+### Files modified
+| File | Description |
+|------|-------------|
+| `frontend/src/pages/Dashboard.jsx` | Full task management UI |
+| `frontend/src/pages/Dashboard.css` | Dashboard styles |
+| `frontend/src/index.css` | Global style updates |
+| `backend/models/Task.js` | Model updates |
+| `backend/routes/tasks.js` | Route fixes |
 
 ---
 
