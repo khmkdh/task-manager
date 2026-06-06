@@ -38,27 +38,10 @@ const Register = () => {
 
   return (
     <div className="auth-page">
-      <div className="auth-left">
-        <div className="auth-grid-bg" />
-        <div className="auth-orb" />
-        <div className="auth-orb2" />
-        <div className="auth-brand">
-          <h1 className="auth-logo">Taskr</h1>
-          <p className="auth-brand-tag">// task management system</p>
-        </div>
-        <div className="auth-bottom">
-          <div className="auth-status-pill">
-            <span className="auth-dot" />
-            System online
-          </div>
-          <p className="auth-version">v1.0.0 — built with<br />MERN stack</p>
-        </div>
-      </div>
-
       <div className="auth-right">
         <div className="auth-header">
-          <h2>Create account</h2>
-          <p className="auth-subtitle">Join your workspace today</p>
+          <h1 className="auth-logo">Task<span>r</span></h1>
+          <p className="auth-subtitle">Create your account</p>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>

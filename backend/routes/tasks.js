@@ -41,13 +41,15 @@ router.get('/:id', async (req, res) => {
 // POST /api/tasks — create a new task
 router.post('/', async (req, res) => {
   try {
-    const { title, description } = req.body;
+    const { title, description, priority, dueDate } = req.body;
 
     if (!title) return res.status(400).json({ message: 'Title is required' });
 
     const task = await Task.create({
       title,
       description: description || '',
+      priority: priority || 'medium',
+      dueDate: dueDate || null,
       userId: req.user.id,
     });
 
@@ -57,19 +59,19 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /api/tasks/:id — update task (title, description, status)
+// PUT /api/tasks/:id — update task
 router.put('/:id', async (req, res) => {
   try {
-    const { title, description, status } = req.body;
+    const { title, description, status, priority, dueDate } = req.body;
 
     const task = await Task.findOne({ _id: req.params.id, userId: req.user.id });
     if (!task) return res.status(404).json({ message: 'Task not found' });
 
     if (title !== undefined) task.title = title;
     if (description !== undefined) task.description = description;
-    if (status !== undefined && ['pending', 'completed'].includes(status)) {
-      task.status = status;
-    }
+    if (status !== undefined && ['pending', 'completed'].includes(status)) task.status = status;
+    if (priority !== undefined && ['high', 'medium', 'low'].includes(priority)) task.priority = priority;
+    if (dueDate !== undefined) task.dueDate = dueDate || null;
 
     await task.save();
     res.json(task);
