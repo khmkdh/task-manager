@@ -1,37 +1,99 @@
-# Task Manager
+# Taskr — Task Manager
 
-A full-stack Task Management application built with the MERN stack — React frontend with JWT-protected Node.js/Express backend and MongoDB Atlas database.
+A full-stack productivity-focused Task Management application built with the MERN stack. Taskr helps users stay on top of their work with priority tracking, due date management, real-time progress monitoring, and a gamification system that rewards consistent performance.
 
 This project was developed as part of the MERN Stack Internship Assignment for AvQuint Solutions Pvt Ltd.
+
+---
+
+## Overview
+
+Taskr is designed for individuals who need a clean, distraction-free way to organize their tasks. Whether you're a student managing deadlines, a developer tracking project work, or a professional organizing daily tasks — Taskr keeps you focused and motivated.
+
+## Screenshots
+
+### Login
+![Login](screenshots/login.png)
+
+### Dashboard (Dark Mode)
+![Dashboard Dark](screenshots/dashboard.png)
+
+### Dashboard (Light Mode)
+![Dashboard Light](screenshots/dashboard-light.png)
+
+### Add Task Modal
+![Add Task](screenshots/add-task.png)
+
+### Badges
+![Badges](screenshots/badges.png)
+
+### Who is it for?
+- Students managing assignment deadlines
+- Developers tracking project tasks
+- Professionals organizing daily work
+
+### Why Taskr?
+- No clutter — just your tasks, clearly organized
+- Priority + due date system keeps you focused on what matters
+- Instant status toggle so you can mark progress in one click
+- Gamification system rewards you for staying consistent
+- Secure — your tasks are private and protected with JWT auth
 
 ---
 
 ## Features
 
 ### Authentication
-- User Registration
-- User Login
-- JWT-based Authentication
+- User Registration & Login
+- JWT-based Authentication with 7-day token expiry
 - Password Hashing using bcryptjs
-- Protected Routes
+- Protected Routes with middleware
+- Persistent sessions via localStorage
 
 ### Task Management
-- Create Task
-- Get All Tasks
-- Get Single Task
-- Update Task
-- Delete Task
-- Toggle Task Status (Pending ↔ Completed)
+- Create Task with title, description, priority and due date
+- View all tasks in a structured table layout
+- Edit task details via modal
+- Delete task with confirmation prompt
+- Toggle Task Status (Pending ↔ Completed) with one click
+- Priority levels — High, Medium, Low with color-coded badges
+- Due date tracking with overdue highlighting in red
 
-### Filtering & Search
-- Filter tasks by status
-- Search tasks by keyword
+### Dashboard
+- Stats cards — Total, Pending, Completed, Overdue
+- Overall progress bar (completion percentage)
+- Sidebar navigation — My Tasks, Completed, Overdue with count badges
+- Filter tabs — All, Pending, Done
+- Sort by — Newest, Oldest, Priority, Due Date
+- Real-time search by task title or description
+- Dark / Light mode toggle — persists across sessions
+
+### Gamification
+- XP Points — earn XP on every task completed
+  - High priority → 20 XP
+  - Medium priority → 10 XP
+  - Low priority → 5 XP
+  - Early completion bonus → +5 XP
+- Level System — level up every 100 XP, displayed in navbar with progress bar
+- 6 Unlockable Badges
+  - 🎯 First Task — complete your first task
+  - 🚀 Getting Started — complete 5 tasks
+  - ⭐ Task Master — complete 10 tasks
+  - 👑 Legend — complete 25 tasks
+  - 🔥 On Fire — achieve a 3-day streak
+  - 💎 Unstoppable — achieve a 7-day streak
+- Daily Streak tracking — build a streak by completing tasks every day
+- Confetti animation on task completion
+- Toast notifications for all actions
+- Motivational messages on completion
 
 ### Security
-- JWT Authentication Middleware
-- User-Scoped Data Access
-- Password Hashing
-- Protected CRUD Operations
+- Passwords hashed using bcryptjs (never stored as plain text)
+- JWT Token Authentication with expiry
+- Protected API Routes via middleware
+- User-specific Task Access — users cannot access others' tasks
+- Input Validation on all endpoints
+- Environment Variable Protection via dotenv
 
 ---
 
@@ -43,8 +105,9 @@ This project was developed as part of the MERN Stack Internship Assignment for A
 | Backend | Node.js, Express.js |
 | Database | MongoDB Atlas, Mongoose |
 | Authentication | JWT, bcryptjs |
+| Styling | CSS3, Inter & Syne Google Fonts |
 | Environment Variables | dotenv |
-| Development | nodemon, VS Code |
+| Development | nodemon, VS Code, Postman |
 
 ---
 
@@ -63,7 +126,7 @@ task-manager/
 │   ├── routes/
 │   │   ├── auth.js
 │   │   └── tasks.js
-│   ├── .env
+│   ├── .env          (not committed)
 │   ├── .gitignore
 │   ├── package.json
 │   └── server.js
@@ -79,9 +142,11 @@ task-manager/
     │   │   ├── Login.jsx
     │   │   ├── Register.jsx
     │   │   ├── Dashboard.jsx
-    │   │   └── Auth.css
+    │   │   ├── Auth.css
+    │   │   └── Dashboard.css
     │   ├── App.jsx
-    │   └── main.jsx
+    │   ├── main.jsx
+    │   └── index.css
     ├── index.html
     └── package.json
 ```
@@ -122,6 +187,8 @@ Backend runs on `http://localhost:5000`
 
 ### Frontend Setup
 
+Open a new terminal:
+
 ```bash
 cd frontend
 npm install
@@ -146,9 +213,24 @@ Request:
 
 ```json
 {
-  "name": "John Doe",
-  "email": "john@example.com",
+  "name": "Tulip",
+  "email": "tulip@example.com",
   "password": "123456"
+}
+```
+
+Response:
+
+```json
+{
+  "_id": "user_id",
+  "name": "Tulip",
+  "email": "tulip@example.com",
+  "xp": 0,
+  "level": 1,
+  "badges": [],
+  "streak": 0,
+  "token": "JWT_TOKEN"
 }
 ```
 
@@ -162,7 +244,7 @@ Request:
 
 ```json
 {
-  "email": "john@example.com",
+  "email": "tulip@example.com",
   "password": "123456"
 }
 ```
@@ -171,7 +253,36 @@ Response:
 
 ```json
 {
+  "_id": "user_id",
+  "name": "Tulip",
+  "email": "tulip@example.com",
+  "xp": 100,
+  "level": 2,
+  "badges": ["first_task"],
+  "streak": 3,
   "token": "JWT_TOKEN"
+}
+```
+
+#### Get User Stats
+
+```http
+GET /api/auth/stats
+```
+
+#### Award XP
+
+```http
+POST /api/auth/award-xp
+```
+
+Request:
+
+```json
+{
+  "xpAmount": 20,
+  "taskCompletedEarly": true,
+  "currentBadges": ["first_task"]
 }
 ```
 
@@ -189,6 +300,17 @@ Authorization: Bearer <token>
 
 ```http
 POST /api/tasks
+```
+
+Request:
+
+```json
+{
+  "title": "Complete Assignment",
+  "description": "Finish MERN internship task",
+  "priority": "high",
+  "dueDate": "2026-06-10"
+}
 ```
 
 ### Get All Tasks
@@ -217,6 +339,18 @@ GET /api/tasks/:id
 PUT /api/tasks/:id
 ```
 
+Request:
+
+```json
+{
+  "title": "Updated Task",
+  "description": "Updated description",
+  "status": "completed",
+  "priority": "medium",
+  "dueDate": "2026-06-15"
+}
+```
+
 ### Toggle Status
 
 ```http
@@ -233,23 +367,22 @@ DELETE /api/tasks/:id
 
 ## Security Features
 
-- Passwords hashed using bcryptjs
-- JWT Token Authentication
-- Protected API Routes
-- User-specific Task Access
-- Input Validation
-- Environment Variable Protection
+- Passwords hashed using bcryptjs (never stored as plain text)
+- JWT Token Authentication with 7-day expiry
+- Protected API Routes via middleware
+- User-specific Task Access — users cannot access others' tasks
+- Input Validation on all endpoints
+- Environment Variable Protection via dotenv
 
 ---
 
 ## Future Enhancements
 
-- Dashboard UI completion
-- Task Categories
-- Due Dates
-- Pagination
-- Profile Management
-- Deployment
+- Task Categories and Tags
+- Pagination for large task lists
+- Email Notifications for overdue tasks
+- Leaderboard for team productivity
+- Deployment to Vercel + Railway
 
 ---
 
