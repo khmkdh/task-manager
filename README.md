@@ -16,7 +16,7 @@ Taskr is designed for individuals who need a clean, distraction-free way to orga
 ![Login](screenshots/Login.png)
 
 ### Register
-![Register](screenshots/Register.png)
+![Register](screenshots/RegisterPage.png)
 
 ### Dashboard (Dark Mode)
 ![Dashboard Dark](screenshots/dashboard.png)
