@@ -1,11 +1,73 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import './Dashboard.css'
 
+// ── Toast ──────────────────────────────────────────────
+const Toast = ({ toasts, removeToast }) => (
+  <div className="toast-container">
+    {toasts.map(t => (
+      <div key={t.id} className={`toast toast-${t.type}`}>
+        <span>{t.message}</span>
+        <button onClick={() => removeToast(t.id)}>✕</button>
+      </div>
+    ))}
+  </div>
+)
+
+// ── Confetti ───────────────────────────────────────────
+const Confetti = ({ active }) => {
+  if (!active) return null
+  const pieces = Array.from({ length: 40 }, (_, i) => i)
+  const colors = ['#818cf8', '#34d399', '#fbbf24', '#f87171', '#a78bfa', '#60a5fa']
+  return (
+    <div className="confetti-wrap">
+      {pieces.map(i => (
+        <div
+          key={i}
+          className="confetti-piece"
+          style={{
+            left: `${Math.random() * 100}%`,
+            background: colors[Math.floor(Math.random() * colors.length)],
+            animationDelay: `${Math.random() * 0.5}s`,
+            animationDuration: `${0.8 + Math.random() * 0.8}s`,
+            width: `${6 + Math.random() * 8}px`,
+            height: `${6 + Math.random() * 8}px`,
+            borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+// ── XP Bar ─────────────────────────────────────────────
+const XpForLevel = (level) => level * 100
+
+const getXpInCurrentLevel = (totalXp) => {
+  let level = 1
+  let remaining = totalXp
+  while (remaining >= XpForLevel(level)) {
+    remaining -= XpForLevel(level)
+    level++
+  }
+  return { xpInLevel: remaining, xpNeeded: XpForLevel(level) }
+}
+
+// ── Badge definitions ──────────────────────────────────
+const BADGE_INFO = {
+  first_task:    { icon: '🎯', label: 'First Task',     desc: 'Completed your first task' },
+  getting_started:{ icon: '🚀', label: 'Getting Started', desc: 'Completed 5 tasks' },
+  task_master:   { icon: '⭐', label: 'Task Master',    desc: 'Completed 10 tasks' },
+  legend:        { icon: '👑', label: 'Legend',         desc: 'Completed 25 tasks' },
+  on_fire:       { icon: '🔥', label: 'On Fire',        desc: '3-day streak' },
+  unstoppable:   { icon: '💎', label: 'Unstoppable',    desc: '7-day streak' },
+}
+
+// ── Main Dashboard ─────────────────────────────────────
 const Dashboard = () => {
-  const { user, logout } = useAuth()
+  const { user, gameStats, logout, awardXP, refreshStats } = useAuth()
   const navigate = useNavigate()
 
   const [tasks, setTasks] = useState([])
@@ -14,6 +76,7 @@ const Dashboard = () => {
   const [error, setError] = useState('')
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
+  const [sortBy, setSortBy] = useState('newest')
   const [showModal, setShowModal] = useState(false)
   const [editTask, setEditTask] = useState(null)
   const [form, setForm] = useState({ title: '', description: '', priority: 'medium', dueDate: '' })
@@ -21,14 +84,33 @@ const Dashboard = () => {
   const [submitting, setSubmitting] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [sidebarFilter, setSidebarFilter] = useState('all')
+  const [toasts, setToasts] = useState([])
+  const [confetti, setConfetti] = useState(false)
+  const [showBadges, setShowBadges] = useState(false)
+  const [newBadgeAlert, setNewBadgeAlert] = useState([])
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') !== 'false')
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light')
+    localStorage.setItem('darkMode', darkMode)
+  }, [darkMode])
 
   useEffect(() => {
     fetchTasks()
+    refreshStats()
   }, [])
 
   useEffect(() => {
     applyFilters()
-  }, [filter, search, sidebarFilter, allTasks])
+  }, [filter, search, sidebarFilter, sortBy, allTasks])
+
+  const addToast = (message, type = 'success') => {
+    const id = Date.now()
+    setToasts(prev => [...prev, { id, message, type }])
+    setTimeout(() => removeToast(id), 3500)
+  }
+
+  const removeToast = (id) => setToasts(prev => prev.filter(t => t.id !== id))
 
   const fetchTasks = async () => {
     setLoading(true)
@@ -61,6 +143,22 @@ const Dashboard = () => {
         (t.description && t.description.toLowerCase().includes(search.toLowerCase()))
       )
     }
+
+    // Sort
+    filtered.sort((a, b) => {
+      if (sortBy === 'newest') return new Date(b.createdAt) - new Date(a.createdAt)
+      if (sortBy === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt)
+      if (sortBy === 'priority') {
+        const order = { high: 0, medium: 1, low: 2 }
+        return order[a.priority] - order[b.priority]
+      }
+      if (sortBy === 'dueDate') {
+        if (!a.dueDate) return 1
+        if (!b.dueDate) return -1
+        return new Date(a.dueDate) - new Date(b.dueDate)
+      }
+      return 0
+    })
 
     setTasks(filtered)
   }
@@ -117,8 +215,10 @@ const Dashboard = () => {
       }
       if (editTask) {
         await api.put(`/tasks/${editTask._id}`, payload)
+        addToast('✏️ Task updated successfully!')
       } else {
         await api.post('/tasks', payload)
+        addToast('✅ Task created successfully!')
       }
       closeModal()
       fetchTasks()
@@ -132,9 +232,44 @@ const Dashboard = () => {
   const handleToggle = async (task) => {
     try {
       await api.patch(`/tasks/${task._id}/toggle`)
+
+      if (task.status === 'pending') {
+        // Task being completed — award XP
+        const result = await awardXP(task)
+
+        // Confetti
+        setConfetti(true)
+        setTimeout(() => setConfetti(false), 1500)
+
+        // XP toast
+        addToast(`⚡ +${result.earnedXp} XP earned!`, 'xp')
+
+        // New badge toast
+        if (result.newBadges && result.newBadges.length > 0) {
+          setNewBadgeAlert(result.newBadges)
+          result.newBadges.forEach(badge => {
+            const info = BADGE_INFO[badge]
+            if (info) addToast(`🏆 Badge unlocked: ${info.label}!`, 'badge')
+          })
+          setTimeout(() => setNewBadgeAlert([]), 4000)
+        }
+
+        // Motivational message
+        const messages = [
+          '🚀 Keep it up!',
+          '💪 You\'re crushing it!',
+          '🔥 On a roll!',
+          '⭐ Great work!',
+          '🎯 Nailed it!',
+        ]
+        addToast(messages[Math.floor(Math.random() * messages.length)], 'motivational')
+      } else {
+        addToast('↩️ Task marked as pending')
+      }
+
       fetchTasks()
     } catch (err) {
-      setError('Failed to update task')
+      addToast('Failed to update task', 'error')
     }
   }
 
@@ -142,9 +277,10 @@ const Dashboard = () => {
     try {
       await api.delete(`/tasks/${id}`)
       setDeleteConfirm(null)
+      addToast('🗑️ Task deleted')
       fetchTasks()
     } catch (err) {
-      setError('Failed to delete task')
+      addToast('Failed to delete task', 'error')
     }
   }
 
@@ -165,6 +301,9 @@ const Dashboard = () => {
   const overdueTasks = allTasks.filter(t => isOverdue(t)).length
   const progressPct = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100)
 
+  const { xpInLevel, xpNeeded } = getXpInCurrentLevel(gameStats.xp)
+  const xpPct = Math.round((xpInLevel / xpNeeded) * 100)
+
   const initials = user?.name
     ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : 'U'
@@ -172,12 +311,38 @@ const Dashboard = () => {
   return (
     <div className="db-page">
       <div className="db-mesh-bg" />
+      <Confetti active={confetti} />
+      <Toast toasts={toasts} removeToast={removeToast} />
 
       <div className="db-content">
         {/* Navbar */}
         <nav className="db-nav">
           <span className="db-logo">Task<span>r</span></span>
           <div className="db-nav-right">
+            {/* XP + Level */}
+            <div className="db-xp-bar">
+              <span className="db-level-badge">Lv.{gameStats.level}</span>
+              <div className="db-xp-track">
+                <div className="db-xp-fill" style={{ width: `${xpPct}%` }} />
+              </div>
+              <span className="db-xp-text">{xpInLevel}/{xpNeeded} XP</span>
+            </div>
+
+            {/* Streak */}
+            {gameStats.streak > 0 && (
+              <div className="db-streak">🔥 {gameStats.streak}</div>
+            )}
+
+            {/* Badges button */}
+            <button className="db-badges-btn" onClick={() => setShowBadges(true)}>
+              🏆 {gameStats.badges.length}
+            </button>
+
+            {/* Dark mode toggle */}
+            <button className="db-theme-btn" onClick={() => setDarkMode(!darkMode)}>
+              {darkMode ? '☀️' : '🌙'}
+            </button>
+
             <span className="db-nav-user">{user?.name}</span>
             <div className="db-avatar">{initials}</div>
             <button className="db-logout-btn" onClick={handleLogout}>Logout</button>
@@ -187,26 +352,35 @@ const Dashboard = () => {
         <div className="db-body">
           {/* Sidebar */}
           <aside className="db-sidebar">
-            <div
-              className={`db-sidebar-item ${sidebarFilter === 'all' ? 'active' : ''}`}
-              onClick={() => setSidebarFilter('all')}
-            >
-              <span className="db-sidebar-dot" />
-              My Tasks
+            <div className={`db-sidebar-item ${sidebarFilter === 'all' ? 'active' : ''}`} onClick={() => setSidebarFilter('all')}>
+              <span className="db-sidebar-dot" /> My Tasks
+              <span className="db-sidebar-count">{totalTasks}</span>
             </div>
-            <div
-              className={`db-sidebar-item ${sidebarFilter === 'completed' ? 'active' : ''}`}
-              onClick={() => setSidebarFilter('completed')}
-            >
-              <span className="db-sidebar-dot" />
-              Completed
+            <div className={`db-sidebar-item ${sidebarFilter === 'completed' ? 'active' : ''}`} onClick={() => setSidebarFilter('completed')}>
+              <span className="db-sidebar-dot" /> Completed
+              <span className="db-sidebar-count">{completedTasks}</span>
             </div>
-            <div
-              className={`db-sidebar-item ${sidebarFilter === 'overdue' ? 'active' : ''}`}
-              onClick={() => setSidebarFilter('overdue')}
-            >
-              <span className="db-sidebar-dot" />
-              Overdue
+            <div className={`db-sidebar-item ${sidebarFilter === 'overdue' ? 'active' : ''}`} onClick={() => setSidebarFilter('overdue')}>
+              <span className="db-sidebar-dot" /> Overdue
+              {overdueTasks > 0 && <span className="db-sidebar-count danger">{overdueTasks}</span>}
+            </div>
+
+            {/* Gamification sidebar section */}
+            <div className="db-sidebar-divider" />
+            <div className="db-sidebar-section">
+              <div className="db-sidebar-label">Your Progress</div>
+              <div className="db-sidebar-stat">
+                <span>Tasks Done</span>
+                <span>{gameStats.totalCompleted}</span>
+              </div>
+              <div className="db-sidebar-stat">
+                <span>Current Streak</span>
+                <span>🔥 {gameStats.streak}</span>
+              </div>
+              <div className="db-sidebar-stat">
+                <span>Level</span>
+                <span>⭐ {gameStats.level}</span>
+              </div>
             </div>
           </aside>
 
@@ -266,6 +440,12 @@ const Dashboard = () => {
                   </button>
                 ))}
               </div>
+              <select className="db-sort" value={sortBy} onChange={e => setSortBy(e.target.value)}>
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="priority">Priority</option>
+                <option value="dueDate">Due Date</option>
+              </select>
               <button className="db-add-btn" onClick={openAddModal}>+ Add Task</button>
             </div>
 
@@ -277,6 +457,7 @@ const Dashboard = () => {
               <div className="db-loading">Loading tasks...</div>
             ) : tasks.length === 0 ? (
               <div className="db-empty">
+                <div className="db-empty-icon">📋</div>
                 <p>No tasks found.</p>
                 <button className="db-add-btn" onClick={openAddModal}>Add your first task</button>
               </div>
@@ -349,7 +530,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Add/Edit Modal */}
       {showModal && (
         <div className="db-modal-overlay" onClick={closeModal}>
           <div className="db-modal" onClick={e => e.stopPropagation()}>
@@ -359,30 +540,14 @@ const Dashboard = () => {
             </div>
             <form onSubmit={handleSubmit}>
               {formError && <div className="db-error">{formError}</div>}
-
               <div className="db-form-group">
                 <label>Title</label>
-                <input
-                  type="text"
-                  name="title"
-                  placeholder="Task title"
-                  value={form.title}
-                  onChange={handleFormChange}
-                  autoFocus
-                />
+                <input type="text" name="title" placeholder="Task title" value={form.title} onChange={handleFormChange} autoFocus />
               </div>
-
               <div className="db-form-group">
                 <label>Description</label>
-                <textarea
-                  name="description"
-                  placeholder="Optional description"
-                  value={form.description}
-                  onChange={handleFormChange}
-                  rows={3}
-                />
+                <textarea name="description" placeholder="Optional description" value={form.description} onChange={handleFormChange} rows={3} />
               </div>
-
               <div className="db-form-row">
                 <div className="db-form-group">
                   <label>Priority</label>
@@ -394,15 +559,9 @@ const Dashboard = () => {
                 </div>
                 <div className="db-form-group">
                   <label>Due Date</label>
-                  <input
-                    type="date"
-                    name="dueDate"
-                    value={form.dueDate}
-                    onChange={handleFormChange}
-                  />
+                  <input type="date" name="dueDate" value={form.dueDate} onChange={handleFormChange} />
                 </div>
               </div>
-
               <div className="db-modal-footer">
                 <button type="button" className="db-cancel-btn" onClick={closeModal}>Cancel</button>
                 <button type="submit" className="db-add-btn" disabled={submitting}>
@@ -410,6 +569,30 @@ const Dashboard = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Badges Modal */}
+      {showBadges && (
+        <div className="db-modal-overlay" onClick={() => setShowBadges(false)}>
+          <div className="db-modal" onClick={e => e.stopPropagation()}>
+            <div className="db-modal-header">
+              <h2>🏆 Your Badges</h2>
+              <button className="db-modal-close" onClick={() => setShowBadges(false)}>✕</button>
+            </div>
+            <div className="db-badges-grid">
+              {Object.entries(BADGE_INFO).map(([key, info]) => {
+                const earned = gameStats.badges.includes(key)
+                return (
+                  <div key={key} className={`db-badge-card ${earned ? 'earned' : 'locked'}`}>
+                    <div className="db-badge-icon">{earned ? info.icon : '🔒'}</div>
+                    <div className="db-badge-label">{info.label}</div>
+                    <div className="db-badge-desc">{info.desc}</div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       )}
