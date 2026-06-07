@@ -76,8 +76,8 @@
 - Built `ProtectedRoute` component — redirects to `/login` if no user in context
 - Built Login page with email/password form validation and error handling
 - Built Register page with name/email/password form, min-length password validation
-- Polished auth UI — dark split-panel layout with grid texture, glowing orbs, monospace accents
-- Both pages are fully responsive (stack on mobile)
+- Polished auth UI — dark blue mesh background, frosted glass card, indigo accents
+- Both pages fully responsive
 
 ### Challenges faced
 - `frontend/` folder had no `package.json` — had to run `npm create vite@latest . -- --template react` inside it and choose "Ignore files and continue"
@@ -92,46 +92,86 @@
 | `src/pages/Login.jsx` | Login page with form validation |
 | `src/pages/Register.jsx` | Register page with form validation |
 | `src/pages/Dashboard.jsx` | Placeholder — full build Day 4 |
-| `src/pages/Auth.css` | Dark split-panel auth UI styles |
+| `src/pages/Auth.css` | Dark blue mesh auth UI styles |
 | `src/App.jsx` | Router setup with protected dashboard route |
 
 ---
 
-## Day 4 — 2026-06-07 | Dashboard UI + Task Management
+## Day 4 — 2026-06-07 (Morning) | Dashboard + Task UI + Priority + Due Date
 
 ### What I did
 - Built full Dashboard page replacing the Day 3 placeholder
-- Implemented task list with pending/completed filter tabs
-- Connected Dashboard to backend `/api/tasks` via Axios with JWT header
-- Added task creation form/modal — POST to `/api/tasks`
-- Added inline edit functionality — PUT to `/api/tasks/:id`
-- Added one-click status toggle — PATCH to `/api/tasks/:id/toggle`
-- Added delete task with confirmation — DELETE to `/api/tasks/:id`
-- Added search bar to filter tasks by keyword
-- Updated `backend/models/Task.js` and `backend/routes/tasks.js` (bug fixes / field updates)
-- Polished Dashboard CSS to match dark auth UI aesthetic
-- Updated `frontend/src/index.css` for global consistency
+- Table-style task list with columns — Task, Priority, Due Date, Status, Actions
+- Stats cards — Total, Pending, Completed, Overdue
+- Overall progress bar showing completion percentage
+- Sidebar navigation — My Tasks, Completed, Overdue with task count badges
+- Filter tabs — All, Pending, Done
+- Sort dropdown — Newest, Oldest, Priority, Due Date
+- Real-time search filtering by title or description
+- Add Task modal with title, description, priority and due date fields
+- Edit Task — opens modal pre-filled with existing task data
+- Delete Task with inline Confirm/Cancel buttons
+- One-click status toggle (pending ↔ completed)
+- Updated `Task` model — added `priority` (high/medium/low) and `dueDate` fields
+- Updated task routes — POST and PUT now handle priority and dueDate
+- Overdue tasks highlighted in red in Due Date column
+- Color-coded priority badges — High (red), Medium (amber), Low (green)
+- Redesigned auth pages to match dashboard dark blue mesh theme
+- Cleaned up `index.css` — removed default Vite styles
 
-### Files modified
+### Challenges faced
+- MongoDB Atlas blocked connection due to IP change — fixed by setting `0.0.0.0/0`
+- Backend submodule issue on GitHub — fixed by removing `.git` from backend folder
+- Priority and due date not saving — backend POST/PUT routes were missing the new fields
+
+### Files created/updated
 | File | Description |
 |------|-------------|
-| `frontend/src/pages/Dashboard.jsx` | Full task management UI |
-| `frontend/src/pages/Dashboard.css` | Dashboard styles |
-| `frontend/src/index.css` | Global style updates |
-| `backend/models/Task.js` | Model updates |
-| `backend/routes/tasks.js` | Route fixes |
+| `backend/models/Task.js` | Added priority and dueDate fields |
+| `backend/routes/tasks.js` | Updated POST and PUT to handle priority and dueDate |
+| `src/pages/Dashboard.jsx` | Full dashboard with all task features |
+| `src/pages/Dashboard.css` | Dark blue mesh theme styles |
+| `src/pages/Login.jsx` | Redesigned to match dashboard theme |
+| `src/pages/Register.jsx` | Redesigned to match dashboard theme |
+| `src/pages/Auth.css` | New dark blue mesh background |
+| `src/index.css` | Cleaned up Vite defaults |
 
 ---
 
-## Day 5 — (Upcoming) | Polish + GitHub + Submission
+## Day 5 — 2026-06-07 | Gamification + Polish + Submission
 
-### Plan
-- Responsive design fixes
-- Loading states and error messages
-- Final README with setup instructions and screenshots
-- Clean up code and comments
-- Push final version to GitHub
-- Prepare submission email
+### What I did
+- Added full gamification system stored in MongoDB
+- XP points awarded on task completion — 20 XP for High, 10 XP for Medium, 5 XP for Low priority
+- Bonus +5 XP for completing tasks before due date
+- Level system — level up every 100 XP, displayed in navbar with XP progress bar
+- 6 unlockable badges — First Task 🎯, Getting Started 🚀, Task Master ⭐, Legend 👑, On Fire 🔥, Unstoppable 💎
+- Daily streak tracking — streak increments when tasks are completed on consecutive days
+- Badges modal — shows all badges, earned ones highlighted, locked ones grayed out
+- Confetti animation on task completion
+- Toast notifications for all actions — create, edit, delete, XP earned, badge unlocked
+- Motivational messages on task completion
+- Dark / Light mode toggle — full theme switch using CSS variables, persists via localStorage
+- Sidebar progress section — shows total completed, current streak, current level
+- New backend endpoints — `GET /api/auth/stats` and `POST /api/auth/award-xp`
+- Updated `AuthContext` — added `gameStats`, `awardXP`, `refreshStats`
+- Updated README with full feature list, gamification section, corrected setup instructions
+- Final commit and push to GitHub
+
+### Challenges faced
+- XP and badge state needed to stay in sync between MongoDB and localStorage
+- Streak logic required careful date comparison to avoid timezone issues
+
+### Files created/updated
+| File | Description |
+|------|-------------|
+| `backend/models/User.js` | Added xp, level, badges, streak, totalCompleted, lastCompletedDate |
+| `backend/routes/auth.js` | Added /stats and /award-xp endpoints, formatUser helper |
+| `src/context/AuthContext.jsx` | Added gameStats, awardXP, refreshStats |
+| `src/pages/Dashboard.jsx` | Gamification, toasts, confetti, dark/light mode, sort, badges modal |
+| `src/pages/Dashboard.css` | CSS variables for full dark/light theme, toast and confetti styles |
+| `README.md` | Updated with full features, gamification section, setup instructions |
+| `DEVLOG.md` | Complete 5-day log |
 
 ---
 
@@ -143,6 +183,7 @@
 | Backend | Node.js, Express.js |
 | Database | MongoDB Atlas, Mongoose |
 | Auth | JWT, bcryptjs |
+| Styling | CSS3, Inter & Syne Google Fonts |
 | Dev Tools | nodemon, VS Code, Postman |
 
 ---
@@ -178,9 +219,11 @@ task-manager/
     │   │   ├── Login.jsx
     │   │   ├── Register.jsx
     │   │   ├── Dashboard.jsx
-    │   │   └── Auth.css
+    │   │   ├── Auth.css
+    │   │   └── Dashboard.css
     │   ├── App.jsx
-    │   └── main.jsx
+    │   ├── main.jsx
+    │   └── index.css
     ├── index.html
     └── package.json
 ```
